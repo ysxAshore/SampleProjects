@@ -1,0 +1,65 @@
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include "./include/wrap.h"
+
+#define MAXLINE 80 //Buffer Size
+#define SERV_PORT 8000 //service port
+
+int main(int argc,char *argv[]) {
+    struct sockaddr_in servaddr,cliaddr; //include ipv4 ipv6
+    socklen_t cliaddr_len; //client's sockaddr_in actutual size(is ipv4 or ipv6)
+    int listenfd,connfd; //listenfd is socket return,connfd is accept return
+    char buf[MAXLINE];
+    char str[INET_ADDRSTRLEN]; //the outgoing parameter of inet_ntop,indicate the client ip str format
+    int i, n;
+
+    listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+
+    bzero(&servaddr, sizeof(servaddr));
+
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(SERV_PORT);
+
+    int opt = 1;
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    Bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    
+    Listen(listenfd,20);
+
+    printf("Accepting connections ...\n");
+
+    //server loop accept the client request
+    while (1) {
+		cliaddr_len = sizeof(cliaddr);
+		connfd = Accept(listenfd,
+				(struct sockaddr *)&cliaddr, &cliaddr_len);
+        int pid = fork();
+        if (pid == -1){
+            perror("call to fork");
+            exit(1);    
+        }else if (pid == 0){
+            //childProcess
+	        n = Read(connfd, buf, MAXLINE);
+            while(n != 0){
+                printf("received from %s at PORT %d\n",
+                        inet_ntop(AF_INET, &cliaddr.sin_addr, str, sizeof(str)) ? str : "unknown",
+                        ntohs(cliaddr.sin_port));
+		        for (i = 0; i < n; i++)
+		        	buf[i] = toupper(buf[i]);
+		        Write(connfd, buf, n); 
+                n = Read(connfd,buf,MAXLINE);
+            }
+		    Close(connfd);
+            exit(0);
+	    }else{
+            Close(connfd);
+    
+        }
+    }
+    return 0;
+}
+
