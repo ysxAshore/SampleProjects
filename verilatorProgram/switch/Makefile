@@ -1,5 +1,5 @@
 VERILATOR = verilator
-VERILATOR_FLAGS = --cc --exe --trace -Wall
+VERILATOR_FLAGS = --cc --exe --trace -Wall --x-assign unique --x-initial unique
 SIM_TOP = sim_top.c
 TOP_MODULE = top.v
 SIMULATION ?= top
@@ -14,7 +14,7 @@ $(OBJ_DIR)/V$(SIMULATION): $(TOP_MODULE) $(SIM_TOP)
 compile: $(OBJ_DIR)/V$(SIMULATION) 
 
 run: compile
-	@./$(OBJ_DIR)/V$(SIMULATION)
+	@./$(OBJ_DIR)/V$(SIMULATION) +verilator+rand+reset+2
 
 clean:
 	rm -rf $(OBJ_DIR) *.vcd
